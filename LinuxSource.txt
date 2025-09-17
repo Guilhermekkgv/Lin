@@ -39,9 +39,9 @@ local function detectDevice()
 end
 
 local Linux = {}
-Linux.CurrentTheme = "Red"
-Linux.SelectedTheme = "Red"
-Linux.Themes = {
+Linux.CurrentAccent = "Red"
+Linux.SelectedAccent = "Red"
+Linux.Accents = {
     Orange = Color3.fromRGB(240, 140, 0),
     Purple = Color3.fromRGB(138, 43, 226),
     Blue = Color3.fromRGB(59, 130, 246),
@@ -56,6 +56,7 @@ Linux.NotificationCounter = 0
 Linux.FrameTransparency = 0.6
 Linux.FrameColor = Color3.fromRGB(23, 23, 23)
 Linux.MainFrameColor = Color3.fromRGB(8, 8, 8)
+Linux.ToggleIconAssetId = "rbxassetid://119686822323882"
 
 Linux.IgnoredElements = {}
 
@@ -77,11 +78,11 @@ function Linux.RegisterAccentElement(element)
     table.insert(Linux.AccentElements, element)
 end
 
-function Linux.ApplyTheme(themeName)
-    if not Linux.Themes[themeName] then return end
+function Linux.ApplyAccent(accentName)
+    if not Linux.Accents[accentName] then return end
     
-    local newColor = Linux.Themes[themeName]
-    Linux.CurrentTheme = themeName
+    local newColor = Linux.Accents[accentName]
+    Linux.CurrentAccent = accentName
     
     for _, element in pairs(Linux.AccentElements) do
         if element and element.Parent then
@@ -91,42 +92,81 @@ function Linux.ApplyTheme(themeName)
     end
 end
 
-function Linux.SaveThemeSettings()
+function Linux.SaveAccentSettings()
     local success, result = pcall(function()
-        local themeData = {
-            Theme = Linux.CurrentTheme
+        local accentData = {
+            Accent = Linux.CurrentAccent
         }
-        local json = HttpService:JSONEncode(themeData)
+        local json = HttpService:JSONEncode(accentData)
         if writefile then
             if not isfolder(Linux.ConfigFolder) then
                 makefolder(Linux.ConfigFolder)
             end
-            writefile(Linux.ConfigFolder .. "/theme.json", json)
+            writefile(Linux.ConfigFolder .. "/accent.json", json)
             return true
         else
             return false, "writefile function not available"
         end
     end)
     if not success then
-        print("Error saving theme settings:", result)
+        print("Error saving accent settings:", result)
     end
     return success, result
 end
 
-function Linux.LoadThemeSettings()
+function Linux.LoadAccentSettings()
     local success, result = pcall(function()
-        if readfile and isfile(Linux.ConfigFolder .. "/theme.json") then
-            local json = readfile(Linux.ConfigFolder .. "/theme.json")
-            local themeData = HttpService:JSONDecode(json)
-            Linux.CurrentTheme = themeData.Theme or "Red"
-            Linux.SelectedTheme = Linux.CurrentTheme
+        if readfile and isfile(Linux.ConfigFolder .. "/accent.json") then
+            local json = readfile(Linux.ConfigFolder .. "/accent.json")
+            local accentData = HttpService:JSONDecode(json)
+            Linux.CurrentAccent = accentData.Accent or "Red"
+            Linux.SelectedAccent = Linux.CurrentAccent
             return true
         else
-            return false, "Theme settings file not found"
+            return false, "Accent settings file not found"
         end
     end)
     if not success then
-        print("Error loading theme settings:", result)
+        print("Error loading accent settings:", result)
+    end
+    return success, result
+end
+
+function Linux.SaveCustomizationSettings()
+    local success, result = pcall(function()
+        local customizationData = {
+            ToggleIconAssetId = Linux.ToggleIconAssetId
+        }
+        local json = HttpService:JSONEncode(customizationData)
+        if writefile then
+            if not isfolder(Linux.ConfigFolder) then
+                makefolder(Linux.ConfigFolder)
+            end
+            writefile(Linux.ConfigFolder .. "/customization.json", json)
+            return true
+        else
+            return false, "writefile function not available"
+        end
+    end)
+    if not success then
+        print("Error saving customization settings:", result)
+    end
+    return success, result
+end
+
+function Linux.LoadCustomizationSettings()
+    local success, result = pcall(function()
+        if readfile and isfile(Linux.ConfigFolder .. "/customization.json") then
+            local json = readfile(Linux.ConfigFolder .. "/customization.json")
+            local customizationData = HttpService:JSONDecode(json)
+            Linux.ToggleIconAssetId = customizationData.ToggleIconAssetId or "rbxassetid://119686822323882"
+            return true
+        else
+            return false, "Customization settings file not found"
+        end
+    end)
+    if not success then
+        print("Error loading customization settings:", result)
     end
     return success, result
 end
@@ -294,7 +334,7 @@ function Linux:Notify(config)
     
     local ProgressFill = Linux.Instance("Frame", {
         Parent = ProgressBar,
-        BackgroundColor3 = Linux.Themes[Linux.CurrentTheme],
+        BackgroundColor3 = Linux.Accents[Linux.CurrentAccent],
         Size = UDim2.new(0, 0, 1, 0),
         ZIndex = 101,
         BorderSizePixel = 1,
@@ -575,7 +615,7 @@ function Linux.LoadConfigList()
                 local fileName = string.match(file, "[^/\\]+$")
                 local configName = string.match(fileName, "(.+)%.json$")
                 
-                if configName and configName ~= "autoload" and configName ~= "privacy" and configName ~= "theme" then
+                if configName and configName ~= "autoload" and configName ~= "privacy" and configName ~= "accent" and configName ~= "customization" then
                     table.insert(Linux.SavedConfigs, configName)
                 end
             end
@@ -602,7 +642,8 @@ function Linux.Create(config)
     
     Linux.LoadAutoLoadSettings()
     Linux.LoadPrivacySettings()
-    Linux.LoadThemeSettings()
+    Linux.LoadAccentSettings()
+    Linux.LoadCustomizationSettings()
     
     local parent = RunService:IsStudio() and LocalPlayer:FindFirstChild("PlayerGui") or (gethui and gethui() or game:GetService("CoreGui"))
     local ProtectGui = protectgui or (syn and syn.protect_gui) or function() end
@@ -647,7 +688,7 @@ function Linux.Create(config)
             BorderSizePixel = 0,
             Size = UDim2.new(0, 50, 0, 50),
             Position = UDim2.new(0, 20, 0.5, -25),
-            Image = "rbxassetid://119686822323882",
+            Image = Linux.ToggleIconAssetId,
             ImageColor3 = Color3.fromRGB(255, 255, 255),
             ZIndex = 1000,
             AutoButtonColor = false
@@ -1029,6 +1070,12 @@ function Linux.Create(config)
         end
     end
     
+    local function UpdateToggleIcon(newAssetId)
+        if ToggleButton then
+            ToggleButton.Image = newAssetId
+        end
+    end
+    
     local TabHolder = Linux.Instance("ScrollingFrame", {
         Parent = TabsBar,
         BackgroundTransparency = 1,
@@ -1226,7 +1273,7 @@ function Linux.Create(config)
         
         local TabAccentBar = Linux.Instance("Frame", {
             Parent = TabBtn,
-            BackgroundColor3 = Linux.Themes[Linux.CurrentTheme],
+            BackgroundColor3 = Linux.Accents[Linux.CurrentAccent],
             BackgroundTransparency = 0,
             BorderSizePixel = 0,
             Size = UDim2.new(0, 0, 0, 24),
@@ -1699,7 +1746,7 @@ function Linux.Create(config)
                     for i, buttonConfig in ipairs(confirmationConfig.Buttons) do
                         local DialogButton = Linux.Instance("TextButton", {
                             Parent = ButtonsFrame,
-                            BackgroundColor3 = i == 1 and Linux.Themes[Linux.CurrentTheme] or Color3.fromRGB(60, 60, 70),
+                            BackgroundColor3 = i == 1 and Linux.Accents[Linux.CurrentAccent] or Color3.fromRGB(60, 60, 70),
                             BorderSizePixel = 0,
                             Size = UDim2.new(0, 80, 0, 30),
                             Font = Enum.Font.GothamSemibold,
@@ -1719,16 +1766,16 @@ function Linux.Create(config)
                         DialogButton.MouseEnter:Connect(function()
                             TweenService:Create(DialogButton, TweenInfo.new(0.2), {
                                 BackgroundColor3 = i == 1 and Color3.fromRGB(
-                                    math.min(255, Linux.Themes[Linux.CurrentTheme].R * 255 + 20),
-                                    math.min(255, Linux.Themes[Linux.CurrentTheme].G * 255 + 20),
-                                    math.min(255, Linux.Themes[Linux.CurrentTheme].B * 255 + 20)
+                                    math.min(255, Linux.Accents[Linux.CurrentAccent].R * 255 + 20),
+                                    math.min(255, Linux.Accents[Linux.CurrentAccent].G * 255 + 20),
+                                    math.min(255, Linux.Accents[Linux.CurrentAccent].B * 255 + 20)
                                 ) or Color3.fromRGB(80, 80, 90)
                             }):Play()
                         end)
                         
                         DialogButton.MouseLeave:Connect(function()
                             TweenService:Create(DialogButton, TweenInfo.new(0.2), {
-                                BackgroundColor3 = i == 1 and Linux.Themes[Linux.CurrentTheme] or Color3.fromRGB(60, 60, 70)
+                                BackgroundColor3 = i == 1 and Linux.Accents[Linux.CurrentAccent] or Color3.fromRGB(60, 60, 70)
                             }):Play()
                         end)
                         
@@ -1881,7 +1928,7 @@ function Linux.Create(config)
                 if thisTrack and thisKnob then
                     local tween = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
                     if currentState then
-                        TweenService:Create(thisTrack, tween, {BackgroundColor3 = Linux.Themes[Linux.CurrentTheme]}):Play()
+                        TweenService:Create(thisTrack, tween, {BackgroundColor3 = Linux.Accents[Linux.CurrentAccent]}):Play()
                         TweenService:Create(thisKnob, tween, {Position = UDim2.new(0, 20, 0.5, -7), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
                         
                         local isAlreadyRegistered = false
@@ -2257,7 +2304,7 @@ function Linux.Create(config)
                         
                         local OptAccentBar = Linux.Instance("Frame", {
                             Parent = OptBtn,
-                            BackgroundColor3 = Linux.Themes[Linux.CurrentTheme],
+                            BackgroundColor3 = Linux.Accents[Linux.CurrentAccent],
                             BackgroundTransparency = 0,
                             BorderSizePixel = 0,
                             Size = isSelected and UDim2.new(0, 4, 0, 20) or UDim2.new(0, 0, 0, 20),
@@ -2521,7 +2568,7 @@ function Linux.Create(config)
             
             local FillBar = Linux.Instance("Frame", {
                 Parent = SliderBar,
-                BackgroundColor3 = Linux.Themes[Linux.CurrentTheme],
+                BackgroundColor3 = Linux.Accents[Linux.CurrentAccent],
                 Size = UDim2.new(0, 0, 1, 0),
                 ZIndex = 2,
                 BorderSizePixel = 1,
@@ -3741,7 +3788,7 @@ function Linux.Create(config)
                 updateColorArea()
                 updateCursorPosition()
                 
-                local accentColor = Linux.Themes[Linux.CurrentTheme]
+                local accentColor = Linux.Accents[Linux.CurrentAccent]
                 local function createRGBSlider(colorName, position, value)
                     local SliderFrame = Linux.Instance("Frame", {
                         Parent = DialogFrame,
@@ -4188,13 +4235,13 @@ function Linux.Create(config)
         })
         
         SettingsTab.Section({Name = "Accents"})
-        local themeDropdown = SettingsTab.Dropdown({
+        local accentDropdown = SettingsTab.Dropdown({
             Name = "Select Accent",
             Description = "Choose the best color for you",
             Options = {"Orange", "Purple", "Blue", "Red", "Green"},
-            Default = Linux.CurrentTheme,
+            Default = Linux.CurrentAccent,
             Callback = function(selected)
-                Linux.SelectedTheme = selected
+                Linux.SelectedAccent = selected
             end
         })
         
@@ -4202,8 +4249,24 @@ function Linux.Create(config)
             Name = "Apply Accent",
             Description = "Apply the selected color and save.",
             Callback = function()
-                Linux.ApplyTheme(Linux.SelectedTheme)
-                Linux.SaveThemeSettings()
+                Linux.ApplyAccent(Linux.SelectedAccent)
+                Linux.SaveAccentSettings()
+            end
+        })
+        
+        SettingsTab.Section({Name = "Customization"})
+        local toggleIconInput = SettingsTab.Input({
+            Name = "Toggle Icon ID",
+            Description = "Set a custom rbxassetid for the toggle button",
+            Placeholder = "rbxassetid://119686822323882",
+            Default = Linux.ToggleIconAssetId,
+            Finished = true,
+            Callback = function(text)
+                if text and text ~= "" then
+                    Linux.ToggleIconAssetId = text
+                    Linux.SaveCustomizationSettings()
+                    UpdateToggleIcon(text)
+                end
             end
         })
         
@@ -4213,7 +4276,8 @@ function Linux.Create(config)
             "Load Config",
             "Auto Load",
             "Anonymous Mode",
-            "Select Accent"
+            "Select Accent",
+            "Toggle Icon ID"
         })
     end
     
